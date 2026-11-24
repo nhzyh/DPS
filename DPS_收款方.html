@@ -1,0 +1,13 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DPS 收款方</title>
+<style>body{font-family:system-ui;margin:0;background:#f4f6fa;color:#172033;padding:18px}main{max-width:700px;margin:auto;background:white;padding:22px;border-radius:16px}input,button{font:inherit;padding:11px;border-radius:9px;border:1px solid #cbd5e1;width:100%;box-sizing:border-box;margin:7px 0}button{background:#1d4ed8;color:white;border:0;font-weight:700;cursor:pointer}.muted{color:#64748b;font-size:13px}.box{background:#f8fafc;padding:12px;border-radius:10px;margin:10px 0}</style>
+<main><h1>DPS · 收款方钱包</h1><p class="muted">原型：即时到账、编号查询、冻结状态展示</p><div class="box"><b>收款地址：</b>DPS-B7E1</div>
+<label>导入付款方交易凭证 JSON</label><input id="file" type="file" accept=".json,application/json"><button id="import">导入到账记录</button>
+<h3>资产记录</h3><div id="records">暂无导入记录</div>
+<p class="muted">真实版本应通过网络共识同步，不需要手动导入。此原型用 JSON 文件模拟跨角色传递。</p></main>
+<script>
+const K="DPS_V2_RECIPIENT";let items=JSON.parse(localStorage.getItem(K)||"[]");
+function save(){localStorage.setItem(K,JSON.stringify(items));render()}
+function render(){document.getElementById("records").innerHTML=items.map(t=>`<div class="box"><b>${t.txId}</b><br>金额：${t.amount} DPS<br>付款方：${t.from}<br>资产编号：${t.assetId}<br>状态：${t.reviewStatus||t.status||"已到账"}<br>${t.freezeUntil?"冻结截止："+new Date(t.freezeUntil).toLocaleString():""}</div>`).join("")||"暂无到账记录"}
+document.getElementById("import").onclick=async()=>{let f=document.getElementById("file").files[0];if(!f)return alert("先选择交易 JSON 文件");try{let t=JSON.parse(await f.text());if(!t.txId||!t.assetId||!t.amount)return alert("文件不是有效 DPS 交易凭证");if(items.some(x=>x.txId===t.txId))return alert("该交易编号已导入");t.reviewStatus=t.report?.reviewStatus||"已到账";items.push(t);save();alert("交易记录已导入。演示中仅记录凭证，不代表链上到账验证。")}catch(e){alert("JSON 文件读取失败")}};
+render();
+</script></html>

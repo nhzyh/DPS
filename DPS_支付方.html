@@ -1,0 +1,21 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DPS 支付方</title>
+<style>body{font-family:system-ui;margin:0;background:#f4f6fa;color:#172033;padding:18px}main{max-width:700px;margin:auto;background:white;padding:22px;border-radius:16px}input,button{font:inherit;padding:11px;border-radius:9px;border:1px solid #cbd5e1;width:100%;box-sizing:border-box;margin:7px 0}button{background:#1d4ed8;color:white;border:0;font-weight:700;cursor:pointer}.muted{color:#64748b;font-size:13px}.box{background:#f8fafc;padding:12px;border-radius:10px;margin:10px 0}pre{white-space:pre-wrap;word-break:break-word}</style>
+<main><h1>DPS · 支付方钱包</h1><p class="muted">原型：即时转账 + 资产编号 + 举报申请</p>
+<div class="box"><b>演示余额：</b><span id="bal">1000.00</span> DPS</div>
+<label>收款方地址</label><input id="to" value="DPS-B7E1" placeholder="收款方地址">
+<label>金额</label><input id="amt" type="number" min="0.01" step="0.01" value="25">
+<label>备注</label><input id="memo" placeholder="可选">
+<button id="pay">立即转账</button>
+<h3>交易记录</h3><div id="records"></div>
+<p class="muted">转账后即时到账。货币编号保留；如发现诈骗，可使用交易编号提交举报。此原型不是真实货币。</p></main>
+<script>
+const K="DPS_V2_DEMO";let s=JSON.parse(localStorage.getItem(K)||'{"balance":1000,"transactions":[]}');
+function save(){localStorage.setItem(K,JSON.stringify(s));render()}
+function serial(){return "DPS-"+Date.now().toString(36).toUpperCase()+"-"+Math.random().toString(36).slice(2,7).toUpperCase()}
+function render(){document.getElementById("bal").textContent=s.balance.toFixed(2);document.getElementById("records").innerHTML=s.transactions.filter(t=>t.fromRole==="payer").slice().reverse().map(t=>`<div class="box"><b>${t.txId}</b><br>${t.amount} DPS → ${t.to}<br>资产编号：${t.assetId}<br>状态：${t.status}<br><button onclick="report('${t.txId}')">举报此交易</button><button onclick="downloadTx('${t.txId}')">导出交易凭证 JSON</button></div>`).join("")||"暂无交易"}
+document.getElementById("pay").onclick=()=>{let to=document.getElementById("to").value.trim(),amount=Number(document.getElementById("amt").value);if(!to||!amount||amount<=0)return alert("请填写收款地址和有效金额");if(amount>s.balance)return alert("余额不足");let tx={protocol:"DPS-demo-v2",txId:serial(),assetId:serial(),from:"DPS-A8F2",to,amount,memo:document.getElementById("memo").value,createdAt:new Date().toISOString(),status:"已到账",freezeDays:7,report:null,fromRole:"payer"};s.balance-=amount;s.transactions.push(tx);save();alert("转账成功，收款方即时到账！交易编号："+tx.txId)}
+function downloadTx(id){let t=s.transactions.find(x=>x.txId===id);download(t,id+".json")}
+function report(id){let t=s.transactions.find(x=>x.txId===id);let reason=prompt("举报理由（请填写事实和证据线索）：");if(!reason)return;t.report={reason,reportedAt:new Date().toISOString(),reviewStatus:"待审核"};t.status="已举报-待审核";save();download(t,"举报-"+id+".json");alert("举报凭证已生成。此演示会下载交易 JSON，需交给审核方导入。")}
+function download(obj,name){let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:"application/json"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+render();
+</script></html>

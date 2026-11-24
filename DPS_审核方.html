@@ -1,0 +1,15 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DPS 审核方</title>
+<style>body{font-family:system-ui;margin:0;background:#f4f6fa;color:#172033;padding:18px}main{max-width:800px;margin:auto;background:white;padding:22px;border-radius:16px}input,button{font:inherit;padding:11px;border-radius:9px;border:1px solid #cbd5e1;width:100%;box-sizing:border-box;margin:7px 0}button{background:#1d4ed8;color:white;border:0;font-weight:700;cursor:pointer}.secondary{background:#64748b}.danger{background:#b91c1c}.box{background:#f8fafc;padding:12px;border-radius:10px;margin:10px 0}.muted{color:#64748b;font-size:13px}pre{white-space:pre-wrap;word-break:break-word}</style>
+<main><h1>DPS · 审核方控制台</h1><p class="muted">原型：导入举报凭证、模拟审核、通过后冻结7天、生成处理结果凭证</p>
+<label>导入举报/交易 JSON</label><input id="file" type="file" accept=".json,application/json"><button id="load">载入案件</button><div id="case"></div></main>
+<script>
+let current=null;
+function download(o,name){let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(o,null,2)],{type:"application/json"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function show(){if(!current)return;document.getElementById("case").innerHTML=`<div class="box"><b>交易编号：</b>${current.txId}<br><b>资产编号：</b>${current.assetId}<br><b>付款方：</b>${current.from}<br><b>收款方：</b>${current.to}<br><b>金额：</b>${current.amount} DPS<br><b>举报理由：</b>${current.report?.reason||"未提供"}<br><b>当前状态：</b>${current.status}</div><button id="approve">审核通过：冻结7天</button><button class="secondary" id="reject">驳回举报：保持正常状态</button><button class="danger" id="refund">模拟案件确认：返还付款方</button><div id="result"></div>`;
+document.getElementById("approve").onclick=()=>{current.status="已审核通过-冻结";current.reviewStatus="冻结7天";current.freezeUntil=new Date(Date.now()+7*86400000).toISOString();current.review={decision:"approved",reviewedAt:new Date().toISOString(),freezeDays:7};finish("审核通过，资产进入7天冻结期。请在现实流程中依法联系警方或相关机构。")};
+document.getElementById("reject").onclick=()=>{current.status="举报驳回-正常资产";current.reviewStatus="举报驳回";current.review={decision:"rejected",reviewedAt:new Date().toISOString()};finish("举报已模拟驳回，资产保持正常状态。")};
+document.getElementById("refund").onclick=()=>{if(!current.review||current.review.decision!=="approved")return alert("请先审核通过");current.status="模拟返还付款方";current.reviewStatus="已返还（模拟）";current.refund={decision:"refund-to-sender",at:new Date().toISOString(),note:"仅演示，不代表真实法律决定"};finish("已生成模拟返还结果凭证。真实系统需依据合法授权和协议执行。")};
+}
+function finish(msg){document.getElementById("result").innerHTML=`<div class="box">${msg}<br><button id="export">导出审核结果 JSON</button></div>`;document.getElementById("export").onclick=()=>download(current,"审核结果-"+current.txId+".json")}
+document.getElementById("load").onclick=async()=>{let f=document.getElementById("file").files[0];if(!f)return alert("选择 JSON 文件");try{current=JSON.parse(await f.text());if(!current.txId||!current.assetId)return alert("无效交易凭证");show()}catch(e){alert("读取失败")}};
+</script></html>
